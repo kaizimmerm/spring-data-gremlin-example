@@ -2,8 +2,24 @@ pool:
   vmImage: "ubuntu-20.04"
 
 variables:
-  MAVEN_CACHE_FOLDER: $(Pipeline.Workspace)/.m2/repository
-  MAVEN_OPTS: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
+  - name: mavenCacheFolder
+    value: $(Pipeline.Workspace)/.m2/repository
+  - name: mavenCacheOpts
+    value: '-Dmaven.repo.local=$(mavenCacheFolder)'
+  - name: intTestResourceGroup
+    value:  'kaizimmerm'
+  - name: intTestCosmosAccount
+    value:  'kaizimmerm-sample'
+  - name: intTestCosmosEndpoint
+    value:  $(intTestCosmosAccount).gremlin.cosmos.azure.com
+  - name: intTestCosmosDbName
+    value:  'test$(Build.BuildId)'
+  - name: intTestCosmosCollectionName
+    value:  'sample-graph'
+  - name: intTestCosmosUsername
+    value: '/dbs/$(intTestCosmosDbName)/colls/$(intTestCosmosCollectionName)'
+  # Overrides and credentials
+  - group: kaizimmerm
 
 steps:
   - task: SonarCloudPrepare@1
@@ -17,18 +33,22 @@ steps:
     inputs:
       key: 'maven | **/pom.xml'
       path: $(MAVEN_CACHE_FOLDER)    
-  
   - task: AzureCLI@2
+    displayName: "Setup CosmosDB gremlin database for integration test"
     inputs:
       azureSubscription: 'AzureKaizimmerm'
       scriptType: bash
       scriptLocation: inlineScript
       inlineScript: |
-        az --version
-        az account show
-    displayName: "Setup CosmosDB gremlin database for integration test"
+        az cosmosdb gremlin database create --acount-name $(intTestCosmosAccount) \
+          --name $(intTestCosmosDbName) --resource-group $(intTestCosmosAccount)
+        az cosmosdb gremlin graph create --account-name $(intTestCosmosAccount) \
+          --database-name $(intTestCosmosDbName) --name $(intTestCosmosCollectionName) \
+          --partition-key-path "/address" --resource-group $(intTestCosmosAccount)
   - task: Maven@3
     displayName: 'Maven verify and integration-test'
+    # to ensure that test DB is cleaned up
+    continueOnError: true
     inputs:
       mavenPomFile: "pom.xml"
       mavenOptions: "-Xmx3072m"
@@ -40,7 +60,16 @@ steps:
       sqMavenPluginVersionChoice: 'latest'
       codeCoverageToolOption: 'JaCoCo'
       testResultsFiles: "**/surefire-reports/TEST-*.xml"
-      goals: "verify integration-test $(MAVEN_OPTS)"
+      goals: "install -Pintegration-test -Dgremlin.endpoint=$(intTestCosmosEndpoint) -Dgremlin.username=$(intTestCosmosUsername) -Dgremlin.password=$(intTestCosmosKey) $(mavenCacheOpts)"
+  - task: AzureCLI@2
+    displayName: "Delete CosmosDB gremlin database from integration test"
+    inputs:
+      azureSubscription: 'AzureKaizimmerm'
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        az cosmosdb gremlin database delete --acount-name $(intTestCosmosAccount) \
+          --name $(intTestCosmosDbName) --resource-group $(intTestCosmosAccount) --yes    
   - task: SonarCloudPublish@1
     displayName: 'Publish results on build summary'
     inputs:
