@@ -40,11 +40,11 @@ steps:
       scriptType: bash
       scriptLocation: inlineScript
       inlineScript: |
-        az cosmosdb gremlin database create --acount-name $(intTestCosmosAccount) \
-          --name $(intTestCosmosDbName) --resource-group $(intTestCosmosAccount)
+        az cosmosdb gremlin database create --account-name $(intTestCosmosAccount) \
+          --name $(intTestCosmosDbName) --resource-group $(intTestResourceGroup)
         az cosmosdb gremlin graph create --account-name $(intTestCosmosAccount) \
           --database-name $(intTestCosmosDbName) --name $(intTestCosmosCollectionName) \
-          --partition-key-path "/address" --resource-group $(intTestCosmosAccount)
+          --partition-key-path "/address" --resource-group $(intTestResourceGroup)
   - task: Maven@3
     displayName: 'Maven verify and integration-test'
     # to ensure that test DB is cleaned up
@@ -55,8 +55,8 @@ steps:
       javaHomeOption: "JDKVersion"
       jdkVersionOption: "1.11"
       jdkArchitectureOption: "x64"
-      publishJUnitResults: true
-      sonarQubeRunAnalysis: true
+      publishJUnitResults: false
+      sonarQubeRunAnalysis: false
       sqMavenPluginVersionChoice: 'latest'
       codeCoverageToolOption: 'JaCoCo'
       testResultsFiles: "**/surefire-reports/TEST-*.xml"
@@ -68,8 +68,8 @@ steps:
       scriptType: bash
       scriptLocation: inlineScript
       inlineScript: |
-        az cosmosdb gremlin database delete --acount-name $(intTestCosmosAccount) \
-          --name $(intTestCosmosDbName) --resource-group $(intTestCosmosAccount) --yes    
+        az cosmosdb gremlin database delete --account-name $(intTestCosmosAccount) \
+          --name $(intTestCosmosDbName) --resource-group $(intTestResourceGroup) --yes    
   - task: SonarCloudPublish@1
     displayName: 'Publish results on build summary'
     inputs:
