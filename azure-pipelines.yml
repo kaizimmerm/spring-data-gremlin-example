@@ -32,7 +32,7 @@ steps:
     displayName: Cache Maven local repo
     inputs:
       key: 'maven | **/pom.xml'
-      path: $(MAVEN_CACHE_FOLDER)    
+      path: $(mavenCacheFolder)    
   - task: AzureCLI@2
     displayName: "Setup CosmosDB gremlin database for integration test"
     inputs:
