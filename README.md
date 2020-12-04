@@ -1,5 +1,7 @@
 # The Sprint Data Gremlin with Azure Cosmos DB example project
 
+[![Build Status](https://dev.azure.com/kaizimmerm/tutorials/_apis/build/status/kaizimmerm.spring-data-gremlin-example?branchName=master)](https://dev.azure.com/kaizimmerm/tutorials/_build/latest?definitionId=7&branchName=master) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=com.kaizimmerm%3Aspring-data-gremlin-example&metric=alert_status)](https://sonarcloud.io/dashboard?id=com.kaizimmerm%3Aspring-data-gremlin-example)
+
 - Simple Sprint Data Gremlin service with Sprint Data Rest
 - Minimal integration tests 
 

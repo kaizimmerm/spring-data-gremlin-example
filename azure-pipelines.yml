@@ -10,16 +10,14 @@ variables:
     value:  'kaizimmerm'
   - name: intTestCosmosAccount
     value:  'kaizimmerm-sample'
-  - name: intTestCosmosEndpoint
-    value:  $(intTestCosmosAccount).gremlin.cosmos.azure.com
   - name: intTestCosmosDbName
     value:  'test$(Build.BuildId)'
   - name: intTestCosmosCollectionName
     value:  'sample-graph'
   - name: intTestCosmosUsername
     value: '/dbs/$(intTestCosmosDbName)/colls/$(intTestCosmosCollectionName)'
-  # Overrides and credentials
-  - group: kaizimmerm
+  - name: intTestCosmosEndpoint
+    value:  $(intTestCosmosAccount).gremlin.cosmos.azure.com
 
 steps:
   - task: SonarCloudPrepare@1
@@ -45,9 +43,18 @@ steps:
         az cosmosdb gremlin graph create --account-name $(intTestCosmosAccount) \
           --database-name $(intTestCosmosDbName) --name $(intTestCosmosCollectionName) \
           --partition-key-path "/address" --resource-group $(intTestResourceGroup)
+  - task: AzureCLI@2
+    displayName: "Retrieve CosmosDB key for integration test"
+    inputs:
+      azureSubscription: 'AzureKaizimmerm'
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: |
+        keyCosmos=`az cosmosdb keys list --name $(intTestCosmosAccount) \
+                --resource-group $(intTestResourceGroup) --query primaryMasterKey -o tsv`
+        echo "##vso[task.setvariable variable=intTestCosmosKey;issecret=true]$keyCosmos"
   - task: Maven@3
     displayName: 'Maven verify and integration-test'
-    # to ensure that test DB is cleaned up
     inputs:
       mavenPomFile: "pom.xml"
       mavenOptions: "-Xmx3072m"
@@ -59,8 +66,10 @@ steps:
       sqMavenPluginVersionChoice: 'latest'
       codeCoverageToolOption: 'JaCoCo'
       testResultsFiles: "**/surefire-reports/TEST-*.xml"
-      goals: "install -Pintegration-test -Dgremlin.endpoint=$(intTestCosmosEndpoint) -Dgremlin.username=$(intTestCosmosUsername) -Dgremlin.password=$(intTestCosmosKey) $(mavenCacheOpts)"
-  - task: AzureCLI@2  
+      goals: "verify -Pintegration-test -Dgremlin.endpoint=$(intTestCosmosEndpoint) -Dgremlin.username=$(intTestCosmosUsername) -Dgremlin.password=$(intTestCosmosKey) $(mavenCacheOpts)"
+    env:
+      COSMOS_KEY: $(intTestCosmosKey)
+  - task: AzureCLI@2
     displayName: "Delete CosmosDB gremlin database from integration test"
     condition: succeededOrFailed()
     inputs:
