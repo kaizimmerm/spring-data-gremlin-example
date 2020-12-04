@@ -48,21 +48,21 @@ steps:
   - task: Maven@3
     displayName: 'Maven verify and integration-test'
     # to ensure that test DB is cleaned up
-    continueOnError: true
     inputs:
       mavenPomFile: "pom.xml"
       mavenOptions: "-Xmx3072m"
       javaHomeOption: "JDKVersion"
       jdkVersionOption: "1.11"
       jdkArchitectureOption: "x64"
-      publishJUnitResults: false
-      sonarQubeRunAnalysis: false
+      publishJUnitResults: true
+      sonarQubeRunAnalysis: true
       sqMavenPluginVersionChoice: 'latest'
       codeCoverageToolOption: 'JaCoCo'
       testResultsFiles: "**/surefire-reports/TEST-*.xml"
       goals: "install -Pintegration-test -Dgremlin.endpoint=$(intTestCosmosEndpoint) -Dgremlin.username=$(intTestCosmosUsername) -Dgremlin.password=$(intTestCosmosKey) $(mavenCacheOpts)"
-  - task: AzureCLI@2
+  - task: AzureCLI@2  
     displayName: "Delete CosmosDB gremlin database from integration test"
+    condition: succeededOrFailed()
     inputs:
       azureSubscription: 'AzureKaizimmerm'
       scriptType: bash
