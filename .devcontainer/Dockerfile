@@ -6,5 +6,5 @@ FROM mcr.microsoft.com/vscode/devcontainers/java:${VARIANT}
 ARG MAVEN_VERSION=""
 RUN su vscode -c "source /usr/local/sdkman/bin/sdkman-init.sh && sdk install maven \"${MAVEN_VERSION}\""
 
-# [Optional] Uncomment this section to install additional OS packages.
+# Install additional OS packages.
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
