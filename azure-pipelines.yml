@@ -1,23 +1,28 @@
 pool:
   vmImage: "ubuntu-20.04"
 
+parameters:
+- name: cleanUpTestCosmos
+  default: true
+  type: boolean
+
 variables:
   - name: mavenCacheFolder
     value: $(Pipeline.Workspace)/.m2/repository
   - name: mavenCacheOpts
     value: '-Dmaven.repo.local=$(mavenCacheFolder)'
   - name: intTestResourceGroup
-    value:  'kaizimmerm'
+    value: 'kaizimmerm'
   - name: intTestCosmosAccount
-    value:  'kaizimmerm-sample'
+    value: 'kaizimmerm-sample'
   - name: intTestCosmosDbName
-    value:  'test$(Build.BuildId)'
+    value: 'test$(Build.BuildId)'
   - name: intTestCosmosCollectionName
-    value:  'sample-graph'
+    value: 'sample-graph'
   - name: intTestCosmosUsername
     value: '/dbs/$(intTestCosmosDbName)/colls/$(intTestCosmosCollectionName)'
   - name: intTestCosmosEndpoint
-    value:  $(intTestCosmosAccount).gremlin.cosmos.azure.com
+    value: $(intTestCosmosAccount).gremlin.cosmos.azure.com
 
 steps:
   - task: SonarCloudPrepare@1
@@ -67,18 +72,16 @@ steps:
       codeCoverageToolOption: 'JaCoCo'
       testResultsFiles: "**/surefire-reports/TEST-*.xml"
       goals: "verify -Pintegration-test -Dgremlin.endpoint=$(intTestCosmosEndpoint) -Dgremlin.username=$(intTestCosmosUsername) -Dgremlin.password=$(intTestCosmosKey) $(mavenCacheOpts)"
-    env:
-      COSMOS_KEY: $(intTestCosmosKey)
   - task: AzureCLI@2
     displayName: "Delete CosmosDB gremlin database from integration test"
-    condition: succeededOrFailed()
+    condition: and(always(), eq('${{ parameters.cleanUpTestCosmos }}', true))
     inputs:
       azureSubscription: 'AzureKaizimmerm'
       scriptType: bash
       scriptLocation: inlineScript
       inlineScript: |
         az cosmosdb gremlin database delete --account-name $(intTestCosmosAccount) \
-          --name $(intTestCosmosDbName) --resource-group $(intTestResourceGroup) --yes    
+          --name $(intTestCosmosDbName) --resource-group $(intTestResourceGroup) --yes
   - task: SonarCloudPublish@1
     displayName: 'Publish results on build summary'
     inputs:
